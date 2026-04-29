@@ -7,5 +7,12 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	GetClips(token)
+
+	clips, err := GetClips(token)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	DownloadClips(token, clips)
+
 }

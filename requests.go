@@ -10,9 +10,18 @@ import (
 	"time"
 )
 
+type ClipDownload struct {
+	Id        string `json:"clip_id"`
+	Landscape string `json:"landscape_download_url"`
+}
+
+type DownloadClipData struct {
+	Data []ClipDownload `json:"data"`
+}
+
 type Game struct {
-	Id   string
-	Name string
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Games struct {
@@ -30,7 +39,7 @@ type Clips struct {
 	Clips []Clip `json:"data"`
 }
 
-func GetClips(token *Token) error {
+func GetClips(token *Token) (Clips, error) {
 
 	games := getGameId(token)
 
@@ -60,7 +69,7 @@ func GetClips(token *Token) error {
 		fmt.Println(err)
 	}
 	fmt.Println(clips)
-	return nil
+	return clips, nil
 }
 
 func getGameId(token *Token) *Games {
@@ -88,4 +97,31 @@ func getGameId(token *Token) *Games {
 	fmt.Println(games)
 
 	return &games
+}
+
+func DownloadRequest(token *Token, clip Clip) {
+
+	query := url.Values{}
+	query.Set("clip_id", clip.ID)
+	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/clips/downloads?%v", query.Encode())
+	fmt.Println(endpoint)
+	// query.Set("")
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
+	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var dClip ClipDownload
+	fmt.Println(string(data))
+	json.Unmarshal(data, &dClip)
+	fmt.Println(dClip)
+
 }
