@@ -109,7 +109,7 @@ func getGameId(token *Token) *Games {
 	return &games
 }
 
-func GetClipLinks(slug string) {
+func GetClipLinks(slug string) (*ClipTokenResponse, error) {
 	// hash := sha256.New()
 	body := map[string]any{
 		"operationName": "VideoAccessToken_Clip",
@@ -131,36 +131,18 @@ func GetClipLinks(slug string) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
 	// fmt.Println(string(data))
 	ctr := ClipTokenResponse{}
 	json.Unmarshal(data, &ctr)
 
-	baseUrl := ctr.Data.Clip.VideoQualities[0].SourceURL
-	downLink := fmt.Sprintf("%v?sig=%v&token=%v", baseUrl, ctr.Data.Clip.PlaybackAccessToken.Signature, url.QueryEscape(ctr.Data.Clip.PlaybackAccessToken.Value))
-	resp, err := http.Get(downLink)
-	if err != nil {
-		fmt.Println(err)
-	}
+	return &ctr, nil
 
-	defer resp.Body.Close()
-
-	file, err := os.Create("zalupa")
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
 }
