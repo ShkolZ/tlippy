@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,13 +11,20 @@ import (
 	"time"
 )
 
-type ClipDownload struct {
-	Id        string `json:"clip_id"`
-	Landscape string `json:"landscape_download_url"`
-}
+type ClipTokenResponse struct {
+	Data struct {
+		Clip struct {
+			PlaybackAccessToken struct {
+				Signature string `json:"signature"`
+				Value     string `json:"value"`
+			} `json:"playbackAccessToken"`
 
-type DownloadClipData struct {
-	Data []ClipDownload `json:"data"`
+			VideoQualities []struct {
+				Quality   string `json:"quality"`
+				SourceURL string `json:"sourceURL"`
+			} `json:"videoQualities"`
+		} `json:"clip"`
+	} `json:"data"`
 }
 
 type Game struct {
@@ -34,13 +42,17 @@ type Clip struct {
 	Title       string `json:"title"`
 	Views       int    `json:"view_count"`
 	CreatedAt   string `json:"created_at"`
+	Url         string `json:"url"`
+	Thumbnail   string `json:"thumbnail_url"`
 }
 type Clips struct {
 	Clips []Clip `json:"data"`
 }
 
-func GetClips(token *Token) (Clips, error) {
+const gqlURI = "https://gql.twitch.tv/gql"
+const clientID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
+func GetClips(token *Token) (Clips, error) {
 	games := getGameId(token)
 
 	query := url.Values{}
@@ -49,7 +61,7 @@ func GetClips(token *Token) (Clips, error) {
 	query.Set("started_at", time.Now().Add(-time.Hour*24*7).Format(time.RFC3339))
 
 	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/clips?%v", query.Encode())
-	fmt.Println(endpoint)
+
 	// query.Set("")
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
@@ -68,7 +80,7 @@ func GetClips(token *Token) (Clips, error) {
 	if err = json.Unmarshal(data, &clips); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(clips)
+
 	return clips, nil
 }
 
@@ -78,7 +90,6 @@ func getGameId(token *Token) *Games {
 
 	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/games?%v", query.Encode())
 
-	fmt.Println(endpoint)
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
 	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
@@ -88,27 +99,36 @@ func getGameId(token *Token) *Games {
 	}
 	defer res.Body.Close()
 	data, _ := io.ReadAll(res.Body)
-	fmt.Println(string(data))
+
 	games := Games{}
 	err = json.Unmarshal(data, &games)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(games)
 
 	return &games
 }
 
-func DownloadRequest(token *Token, clip Clip) {
+func GetClipLinks(slug string) {
+	// hash := sha256.New()
+	body := map[string]any{
+		"operationName": "VideoAccessToken_Clip",
+		"variables": map[string]any{
+			"slug": slug,
+		},
+		"extensions": map[string]any{
+			"persistedQuery": map[string]any{
+				"version":    1,
+				"sha256Hash": "36b89d2507fce29e5ca551df756d27c1cfe079e2609642b4390aa4c35796eb11",
+			},
+		},
+	}
+	b, _ := json.Marshal(body)
 
-	query := url.Values{}
-	query.Set("clip_id", clip.ID)
-	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/clips/downloads?%v", query.Encode())
-	fmt.Println(endpoint)
-	// query.Set("")
-	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
-	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+	req, _ := http.NewRequest("POST", gqlURI, bytes.NewReader(b))
+	req.Header.Set("Client-Id", clientID)
+	req.Header.Set("Content-Type", "application/json")
+
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -118,10 +138,29 @@ func DownloadRequest(token *Token, clip Clip) {
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	var dClip ClipDownload
-	fmt.Println(string(data))
-	json.Unmarshal(data, &dClip)
-	fmt.Println(dClip)
+	// fmt.Println(string(data))
+	ctr := ClipTokenResponse{}
+	json.Unmarshal(data, &ctr)
 
+	baseUrl := ctr.Data.Clip.VideoQualities[0].SourceURL
+	downLink := fmt.Sprintf("%v?sig=%v&token=%v", baseUrl, ctr.Data.Clip.PlaybackAccessToken.Signature, url.QueryEscape(ctr.Data.Clip.PlaybackAccessToken.Value))
+	resp, err := http.Get(downLink)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	file, err := os.Create("zalupa")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
