@@ -18,7 +18,6 @@ Then you're gonna need to build your go app
 ```
 cd tlippy
 go build . <custom-name>
-
 ```
 
 with this you're set
