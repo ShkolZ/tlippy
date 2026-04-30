@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -52,11 +53,11 @@ type Clips struct {
 const gqlURI = "https://gql.twitch.tv/gql"
 const clientID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
-func GetClips(token *Token) (Clips, error) {
+func GetClips(token *Token, cfg *Config) (Clips, error) {
 	games := getGameId(token)
 
 	query := url.Values{}
-	query.Set("first", "50")
+	query.Set("first", strconv.Itoa(cfg.ClipsAmount))
 	query.Set("game_id", games.Data[0].Id)
 	query.Set("started_at", time.Now().Add(-time.Hour*24*7).Format(time.RFC3339))
 

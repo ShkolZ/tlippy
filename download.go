@@ -6,18 +6,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 )
 
-func DownloadClips(token *Token, clips Clips) {
+func DownloadClips(token *Token, clips Clips, cfg *Config) {
 	for _, clip := range clips.Clips {
 		split := strings.Split(clip.Url, "/")
 		slug := split[len(split)-1]
-		DownloadClip(slug)
+		DownloadClip(clip, slug, cfg.DownloadPath)
 	}
 }
 
-func DownloadClip(slug string) error {
+func DownloadClip(clip Clip, slug string, dPath string) error {
 	ctr, err := GetClipLinks(slug)
 	if err != nil {
 		return err
@@ -31,7 +32,10 @@ func DownloadClip(slug string) error {
 
 	defer resp.Body.Close()
 
-	file, err := os.Create("zalupa")
+	clipName := fmt.Sprintf("[%v]%v-%v.mp4", clip.CreatedAt, clip.CreatorName, clip.Title)
+	fullPath := path.Join(dPath, clipName)
+
+	file, err := os.Create(fullPath)
 	if err != nil {
 		fmt.Println(err)
 	}
