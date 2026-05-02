@@ -11,42 +11,27 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type screen struct {
-	title   string
-	cursor  int
-	choices []string
-	isInput bool
-}
+type stage int
+
+const (
+	MainStage stage = iota
+	BulkDownload
+	SingleDownload
+)
 
 type model struct {
-	stack []screen
-}
-
-func (m *model) current() *screen {
-	return &m.stack[len(m.stack)-1]
-}
-
-func (m *model) pop() {
-	if len(m.stack) > 1 {
-		m.stack = m.stack[len(m.stack):]
-	}
-
-}
-
-func (m *model) push(s screen) {
-	m.stack = append(m.stack, s)
+	state      stage
+	choices    []string
+	output     string
+	clipAmount int
+	cursor     int
 }
 
 func initialModel() model {
-	curScreen := screen{
-		title:   "Pick Download Method",
-		choices: []string{"Clips in Bulk", "Single Clip"},
-		isInput: false,
-	}
-	tStack := make([]screen, 0)
-	tStack = append(tStack, curScreen)
+
 	return model{
-		stack: tStack,
+		state:   MainStage,
+		choices: []string{"Bulk Download", "Single Download"},
 	}
 }
 
@@ -55,30 +40,36 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cur := m.current()
-
+	
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 
-		case "up":
-			if cur.cursor > 0 {
-				cur.cursor--
-			}
-
-		case "down":
-			if cur.cursor < len(cur.choices)-1 {
-				cur.cursor++
-			}
-		case "enter":
-			choice := cur.choices[cur.cursor]
-			switch choice {
-			case "Clips in Bulk":
-				m.push(screen{})
-			}
-
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		}
+
+		switch m.state {
+		case MainStage:
+			switch msg.String() {
+			case "up":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "down":
+				if m.cursor < len(m.choices)-1 {
+					m.cursor++
+				}
+			case "enter":
+				switch m.choices[m.cursor] {
+				case "Bulk Download":
+					m.state = BulkDownload
+					m.cursor = 0
+				case "Single Download":
+					m.state = SingleDownload
+					m.cursor = 0
+			}
+
 		}
 	}
 }
