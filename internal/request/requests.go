@@ -1,4 +1,4 @@
-package main
+package request
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/ShkolZ/tlippy/internal/config"
@@ -56,18 +55,56 @@ type Clips struct {
 const gqlURI = "https://gql.twitch.tv/gql"
 const clientID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
-func GetClips(token *oauth.Token, cfg *config.Config) (Clips, error) {
-	games := getGameId(token)
+func GetClip(token *oauth.Token, clipID string) (Clip, error) {
+	query := url.Values{}
+	query.Set("id", clipID)
+
+	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/clips?%v", query.Encode())
+
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
+	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Clip{}, fmt.Errorf("request failed: %w", err)
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Clip{}, fmt.Errorf("reading response: %w", err)
+	}
+
+	clips := Clips{}
+	if err = json.Unmarshal(data, &clips); err != nil {
+		return Clip{}, fmt.Errorf("parsing response: %w", err)
+	}
+
+	if len(clips.Clips) == 0 {
+		return Clip{}, fmt.Errorf("clip %q not found", clipID)
+	}
+
+	return clips.Clips[0], nil
+}
+
+func GetClips(token *oauth.Token, input *config.UserInput) (Clips, error) {
+	games := getGameId(token, input.QueryName)
 
 	query := url.Values{}
-	query.Set("first", strconv.Itoa(cfg.ClipsAmount))
+
+	query.Set("first", input.ClipCount)
 	query.Set("game_id", games.Data[0].Id)
-	query.Set("started_at", time.Now().Add(-time.Hour*24*7).Format(time.RFC3339))
+	query.Set("started_at", time.Now().Add(-getTime(input.TimeRange)).Format(time.RFC3339))
 
 	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/clips?%v", query.Encode())
 
 	// query.Set("")
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		fmt.Println(err)
+		return Clips{}, err
+	}
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
 	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
 	res, err := http.DefaultClient.Do(req)
@@ -80,6 +117,7 @@ func GetClips(token *oauth.Token, cfg *config.Config) (Clips, error) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	clips := Clips{}
 	if err = json.Unmarshal(data, &clips); err != nil {
 		fmt.Println(err)
@@ -88,13 +126,16 @@ func GetClips(token *oauth.Token, cfg *config.Config) (Clips, error) {
 	return clips, nil
 }
 
-func getGameId(token *Token) *Games {
+func getGameId(token *oauth.Token, name string) *Games {
 	query := url.Values{}
-	query.Set("igdb_id", "301298")
+	query.Set("name", name)
 
 	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/games?%v", query.Encode())
 
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
 	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
 	res, err := http.DefaultClient.Do(req)
@@ -111,6 +152,18 @@ func getGameId(token *Token) *Games {
 	}
 
 	return &games
+}
+
+func getTime(timeRange config.TimeRange) time.Duration {
+	switch timeRange {
+	case config.TimeRange24h:
+		return time.Hour * 24
+	case config.TimeRange7d:
+		return time.Hour * 24 * 7
+	case config.TimeRangeAll:
+		return time.Hour * 24 * 365 * 100 // approx
+	}
+	return 0
 }
 
 func GetClipLinks(slug string) (*ClipTokenResponse, error) {

@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,7 +23,6 @@ func GetToken() (*Token, error) {
 	}
 	cid := os.Getenv("CLIENT_ID")
 	cs := os.Getenv("CLIENT_SECRET")
-	fmt.Println(cid, cs)
 
 	query := url.Values{}
 	query.Set("client_id", cid)
@@ -51,7 +49,6 @@ func GetToken() (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(token)
 
 	return &token, nil
 }
