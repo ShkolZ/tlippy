@@ -7,8 +7,18 @@ import (
 )
 
 func main() {
-	app := app.NewApp()
-	if err := app.Run(); err != nil {
-		fmt.Println(err)
+	a := app.NewApp()
+	input, err := a.Run()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
 	}
+	if input == nil {
+		// User cancelled (quit before finishing)
+		return
+	}
+
+	// TODO: wire up download logic using input
+	fmt.Printf("Got input: %+v\n", input)
 }
+

@@ -10,6 +10,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/ShkolZ/tlippy/internal/config"
+	"github.com/ShkolZ/tlippy/internal/oauth"
 )
 
 type ClipTokenResponse struct {
@@ -53,7 +56,7 @@ type Clips struct {
 const gqlURI = "https://gql.twitch.tv/gql"
 const clientID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
-func GetClips(token *Token, cfg *Config) (Clips, error) {
+func GetClips(token *oauth.Token, cfg *config.Config) (Clips, error) {
 	games := getGameId(token)
 
 	query := url.Values{}
