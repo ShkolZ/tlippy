@@ -7,9 +7,7 @@ import (
 )
 
 func main() {
-	a := app.NewApp()
-	_, err := a.Run()
-	if err != nil {
-		fmt.Println("Error:", err)
-	}
+	app := app.NewCLI()
+	fmt.Println("Tlippy CLI")
+	app.Run()
 }

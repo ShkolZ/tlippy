@@ -431,18 +431,18 @@ func (m model) goBack() model {
 //  App entry point
 // ─────────────────────────────────────────────
 
-type App struct {
+type TUI struct {
 	Input *config.UserInput
 }
 
-func NewApp() App {
-	return App{}
+func NewTUI() TUI {
+	return TUI{}
 }
 
 // Run launches the BubbleTea TUI, shows download progress inline, and
 // returns the collected UserInput when everything is done.
 // Returns nil Input if the user cancelled.
-func (a *App) Run() (*config.UserInput, error) {
+func (a *TUI) Run() (*config.UserInput, error) {
 	p := tea.NewProgram(newModel())
 	finalModel, err := p.Run()
 	if err != nil {

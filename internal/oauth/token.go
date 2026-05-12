@@ -36,9 +36,6 @@ func GetToken() (*Token, error) {
 
 	defer res.Body.Close()
 
-	if err != nil {
-		return nil, err
-	}
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
