@@ -132,7 +132,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if msg.Done {
 			m.screen = screenDone
-			return m, tea.Quit
+			return m, nil // wait for user to press Enter/Q
 		}
 
 		var pct float64
@@ -161,6 +161,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Block input while downloading
 		if m.screen == screenDownloading {
+			return m, nil
+		}
+
+		// On the done screen, any key quits
+		if m.screen == screenDone {
+			if key == "enter" || key == "q" {
+				return m, tea.Quit
+			}
 			return m, nil
 		}
 
@@ -260,6 +268,7 @@ func (m model) View() tea.View {
 	case screenDone:
 		b.WriteString("  ✓ All done!\n\n")
 		b.WriteString(fmt.Sprintf("  Downloaded %d clips.\n", m.dlCurrent))
+		b.WriteString("\n  [Enter] exit\n")
 
 	default:
 		b.WriteString(fmt.Sprintf("  %s\n\n", m.screenTitle()))

@@ -10,23 +10,32 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var (
+	clientID     = ""
+	clientSecret = ""
+)
+
 type Token struct {
-	Token   string `json:"access_token"`
-	Expires int    `json:"expires_in"`
-	Type    string `json:"token_type"`
+	Token    string `json:"access_token"`
+	Expires  int    `json:"expires_in"`
+	Type     string `json:"token_type"`
+	ClientID string
 }
 
 func GetToken() (*Token, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		return nil, err
+
+	if clientID == "" || clientSecret == "" {
+		err := godotenv.Load(".env")
+		if err != nil {
+			return nil, err
+		}
+		clientID = os.Getenv("CLIENT_ID")
+		clientSecret = os.Getenv("CLIENT_SECRET")
 	}
-	cid := os.Getenv("CLIENT_ID")
-	cs := os.Getenv("CLIENT_SECRET")
 
 	query := url.Values{}
-	query.Set("client_id", cid)
-	query.Set("client_secret", cs)
+	query.Set("client_id", clientID)
+	query.Set("client_secret", clientSecret)
 	query.Set("grant_type", "client_credentials")
 
 	res, err := http.PostForm("https://id.twitch.tv/oauth2/token", query)
@@ -46,6 +55,7 @@ func GetToken() (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
+	token.ClientID = clientID
 
 	return &token, nil
 }

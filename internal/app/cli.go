@@ -65,6 +65,10 @@ func initCmds() {
 		}
 		ch := download.StartDownloadChan(&input)
 		for p := range ch {
+			if p.Err != nil {
+				fmt.Println("Error:", p.Err)
+				continue
+			}
 			fmt.Printf("Progress: %v/%v\n", p.Current, p.Total)
 		}
 		fmt.Println("Done!")

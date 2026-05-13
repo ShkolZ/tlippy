@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/ShkolZ/tlippy/internal/config"
@@ -41,7 +40,7 @@ type Games struct {
 
 type Clip struct {
 	ID          string `json:"id"`
-	CreatorName string `json:"creator_name"`
+	CreatorName string `json:"broadcaster_name"`
 	Title       string `json:"title"`
 	Views       int    `json:"view_count"`
 	CreatedAt   string `json:"created_at"`
@@ -63,7 +62,7 @@ func GetClip(token *oauth.Token, clipID string) (Clip, error) {
 
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
-	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+	req.Header.Add("Client-Id", token.ClientID)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -89,7 +88,10 @@ func GetClip(token *oauth.Token, clipID string) (Clip, error) {
 }
 
 func GetClips(token *oauth.Token, input *config.UserInput) (Clips, error) {
-	games := getGameId(token, input.QueryName)
+	games, err := getGameId(token, input.QueryName)
+	if err != nil {
+		return Clips{}, err
+	}
 
 	query := url.Values{}
 
@@ -106,7 +108,7 @@ func GetClips(token *oauth.Token, input *config.UserInput) (Clips, error) {
 		return Clips{}, err
 	}
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
-	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+	req.Header.Add("Client-Id", token.ClientID)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -126,8 +128,9 @@ func GetClips(token *oauth.Token, input *config.UserInput) (Clips, error) {
 	return clips, nil
 }
 
-func getGameId(token *oauth.Token, name string) *Games {
+func getGameId(token *oauth.Token, name string) (*Games, error) {
 	query := url.Values{}
+
 	query.Set("name", name)
 
 	endpoint := fmt.Sprintf("https://api.twitch.tv/helix/games?%v", query.Encode())
@@ -137,7 +140,7 @@ func getGameId(token *oauth.Token, name string) *Games {
 		fmt.Println(err)
 	}
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", token.Token))
-	req.Header.Add("Client-Id", os.Getenv("CLIENT_ID"))
+	req.Header.Add("Client-Id", token.ClientID)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -151,7 +154,7 @@ func getGameId(token *oauth.Token, name string) *Games {
 		fmt.Println(err)
 	}
 
-	return &games
+	return &games, nil
 }
 
 func getTime(timeRange config.TimeRange) time.Duration {
