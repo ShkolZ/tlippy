@@ -1,34 +1,46 @@
 # Tlippy
 
-Tlippy is a fast way to bulk download twitch clips by category or streamer. Tlippy is well-suited if
-you don't want to go through each clip one by one to download it.
+Tlippy is a fast tool for bulk-downloading Twitch clips by category or streamer.        
+It's designed for users who want to download many clips at once instead of manually saving clips one by one.
+
+---
 
 # Getting Started
 
-To start using this cli app you need to setup you are going to need to register your own Twitch Application here https://dev.twitch.tv/.
-Then you can get your Client-Id and Client-Secret and setup your .env like this:
+Download the latest release and choose the variant you want to use.
 
-```
-CLIENT_ID="<your client id goes here>"
-CLIENT_SECRET="<your client secret goes here>"
-```
+## Available Variants
 
-Then you're gonna need to build your go app
+### TUI
+> Streamer downloads are not implemented yet (work in progress).
 
-```
-cd tlippy
-go build . <custom-name>
-```
+### CLI
+> Streamer downloads are not implemented yet (work in progress).
 
-with this you're set
+### Basic Usage
 
-# Tutorial
+```bash
+./tlippy bulk -c <twitch_category> -t <time_range: 24h|7d|all> -a <clip_amount> -o <output_path>
 
-Basic usage is
+# Download top 50 clips from League of Legends this week
+./tlippy bulk -c "League of Legends" -t 7d -a 50 -o ./clips
 
-```
-<your-app-name> <path> <clip-amount>
-tlippy ~/Videos/ 20
+# Download all-time top clips
+./tlippy bulk -c Valorant -t all -a 100 -o ./valorant_clips
 ```
 
-with those arguments you'are gonna download 20 clips most viewed clips of the months
+# Build Tutorial
+Prerequisites:
+- Go v1.26.2
+
+Steps to build tlippy by yourself:
+- Clone the repository
+- Register your [Twitch Application](https://dev.twitch.tv/)
+- Get CLIENT_ID and CLIENT_SECRET
+- Rename .env.example into .env
+- Put your CLIENT_ID and CLIENT_SECRET instead of placeholders
+- Build tlippy with:
+ ```bash
+  go mod tidy
+  go build ./cmd/tlippy-<variant>
+ ```
